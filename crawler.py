@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 import cookielib
 import argparse
 import csv
+import ast
 
 br = mechanize.Browser()
 cookiejar =cookielib.LWPCookieJar()
@@ -42,7 +43,6 @@ def search_wok_by_author(name, last_name): # Under development
 
 
 def search_scopus_by_author(name, last_name):
-
     br.open("http://www.scopus.com/search/form.url?display=authorLookup&clear=t&origin=searchbasic")
 
     br.select_form(name="AuthorLookupValidatedSearchForm")
@@ -53,6 +53,30 @@ def search_scopus_by_author(name, last_name):
     br.submit()
 
     br.follow_link(text_regex="Documents")
+
+    br.select_form(name="SearchResultsForm")
+    br.form.set_all_readonly(False)
+
+    soup = BeautifulSoup(br.response().read())  #Get ALL current EIDs
+    br.form["selectedEIDs"] = [ x['value'] for x in soup.findAll('input', attrs={'name': 'selectedEIDs'}) ]
+
+    br.form["oneClickExport"] = '{"Format":"CSV","View":"SpecifyFields", "SelectedFields":"Authors Title SourceTitle CitedBy DOI"}' #Make selected fields variable?
+    br.form["clickedLink"] = "export"
+    br.form["selectAllCheckBox"] = ["on"]
+
+    br.submit()
+
+    return br.response()
+
+
+def search_scopus_by_article(fields=[]):
+    br.open("http://www.scopus.com/search/form.url?display=advanced")
+
+    br.select_form(name="AdvancedValidatedSearchForm")
+    br.form.find_control("searchfield").readonly = False
+
+    br.form["searchfield"] = " OR ".join([ " "+x[0]+"("+x[1]+") " for x in fields])
+    br.submit()
 
     br.select_form(name="SearchResultsForm")
     br.form.set_all_readonly(False)
@@ -84,16 +108,29 @@ def csv_to_dict(data):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Search papers by author in scopus or web of science (not working).", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-s', '--search', help = "Select which db to search (wok|scopus)", default = 'scopus')
-    parser.add_argument('-n', '--name', required = True, help = "Name of the author")
-    parser.add_argument('-l', '--last_name', required = True, help = "Last name of the author")
     parser.add_argument('-o', '--output', help = "Output file", action = "store_true")
+
+    subparsers = parser.add_subparsers(help='Search by author or article')
+
+    author_parser = subparsers.add_parser('author', help = 'Search by author name-lastname')
+    author_parser.add_argument('-n', '--name', required = True, help = "Name of the author")
+    author_parser.add_argument('-l', '--last_name', required = True, help = "Last name of the author")
+
+    article_parser = subparsers.add_parser('article', help = 'Search by article fields')
+    article_parser.add_argument('-a', '--articles', required = True, help = "Article fields to look for. Ex: -a '[[DOI, xxxx], [Title, xxxx]]'")
 
     args = parser.parse_args()
 
-    if args.search == "wok":
-        res = search_wok_by_author(args.name, args.last_name)
+    if args.search == "scopus":
+        if "articles" in args:
+            res = search_scopus_by_article(ast.literal_eval(args.articles))
+        else:
+            res = search_scopus_by_author(args.name, args.last_name)
     else:
-        res = search_scopus_by_author(args.name, args.last_name)
+        if args.articles:
+            res = search_wok_by_article(ast.literal_eval(args.articles))
+        else:
+            res = search_wok_by_author(args.name, args.last_name)
 
     print csv_to_dict(csv.reader(res, skipinitialspace=True))
 

@@ -11,6 +11,13 @@ Todo:
 - Allow complex queries for papers like Title=title AND Author=Mr.X
 
 
+## Installation
+
+You need to install mechanize and beautifulsoup4:
+     
+     pip install mechanize beautifulsoup4
+
+
 ## Usage
 
 ### General

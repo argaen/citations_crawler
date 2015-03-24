@@ -6,9 +6,10 @@ import cookielib
 import argparse
 import csv
 import ast
+import sys
 
 br = mechanize.Browser()
-cookiejar =cookielib.LWPCookieJar()
+cookiejar = cookielib.LWPCookieJar()
 br.set_cookiejar(cookiejar)
 br.set_handle_robots(False)
 br.set_handle_equiv(True)
@@ -16,33 +17,26 @@ br.set_handle_equiv(True)
 br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071615 Fedora/3.0.1-1.fc9 Firefox/3.0.1')]
 
 
-def search_wok_by_author(name, last_name): # Under development
+def get_scopus_publications_by_author_id(scopus_id):
+    br.open("http://www.scopus.com/authid/detail.url?authorId=%s" % scopus_id)
+    br.follow_link(text_regex="View in search results format")
 
-    br.open("http://sauwok5.fecyt.es/apps/WOS_GeneralSearch_input.do?product=WOS&search_mode=GeneralSearch&SID=1EFddcK3PdeMNOGGMCM&preferencesSaved=&highlighted_tab=WOS");
+    br.select_form(name="SearchResultsForm")
+    br.form.set_all_readonly(False)
 
-    br.select_form(name='accesoSistemaDir');
+    soup = BeautifulSoup(br.response().read())  # Get ALL current EIDs
+    br.form["selectedEIDs"] = [x['value'] for x in soup.findAll('input', attrs={'name': 'selectedEIDs'})]
 
-    br.submit();
+    br.form["oneClickExport"] = '{"Format":"CSV","View":"SpecifyFields", "SelectedFields":"Authors Title SourceTitle CitedBy DOI"}'  # Make selected fields variable?
+    br.form["clickedLink"] = "export"
+    br.form["selectAllCheckBox"] = ["on"]
 
-    br.follow_link(url="http://sauwok5.fecyt.es/www/?DestApp=WOS")
-
-    br.select_form(name="WOS_GeneralSearch_input_form");
-
-    br.form["value(input1)"] = "GUIMERA R"
-    br.form["value(select1)"] = ["AU"]
-
-    br.submit();
-
-    br.follow_link(text="Create Citation Report")
-
-    soup = BeautifulSoup(br.response().read())
-
-    num_results = soup.find("span", {"id": "RESULTS_FOUND"})
+    br.submit()
 
     return br.response()
 
 
-def search_scopus_by_author(name, last_name):
+def get_scopus_publications_by_author(name, last_name):
     br.open("http://www.scopus.com/search/form.url?display=authorLookup&clear=t&origin=searchbasic")
 
     br.select_form(name="AuthorLookupValidatedSearchForm")
@@ -57,10 +51,10 @@ def search_scopus_by_author(name, last_name):
     br.select_form(name="SearchResultsForm")
     br.form.set_all_readonly(False)
 
-    soup = BeautifulSoup(br.response().read())  #Get ALL current EIDs
-    br.form["selectedEIDs"] = [ x['value'] for x in soup.findAll('input', attrs={'name': 'selectedEIDs'}) ]
+    soup = BeautifulSoup(br.response().read())  # Get ALL current EIDs
+    br.form["selectedEIDs"] = [x['value'] for x in soup.findAll('input', attrs={'name': 'selectedEIDs'})]
 
-    br.form["oneClickExport"] = '{"Format":"CSV","View":"SpecifyFields", "SelectedFields":"Authors Title SourceTitle CitedBy DOI"}' #Make selected fields variable?
+    br.form["oneClickExport"] = '{"Format":"CSV","View":"SpecifyFields", "SelectedFields":"Authors Title SourceTitle CitedBy DOI"}'  # Make selected fields variable?
     br.form["clickedLink"] = "export"
     br.form["selectAllCheckBox"] = ["on"]
 
@@ -69,22 +63,22 @@ def search_scopus_by_author(name, last_name):
     return br.response()
 
 
-def search_scopus_by_article(fields=[]):
+def get_scopus_publication_by_fields(fields=[]):
     br.open("http://www.scopus.com/search/form.url?display=advanced")
 
     br.select_form(name="AdvancedValidatedSearchForm")
     br.form.find_control("searchfield").readonly = False
 
-    br.form["searchfield"] = " OR ".join([ " "+x[0]+"("+x[1]+") " for x in fields])
+    br.form["searchfield"] = " OR ".join([" " + x[0] + "(" + x[1] + ") " for x in fields])
     br.submit()
 
     br.select_form(name="SearchResultsForm")
     br.form.set_all_readonly(False)
 
-    soup = BeautifulSoup(br.response().read())  #Get ALL current EIDs
-    br.form["selectedEIDs"] = [ x['value'] for x in soup.findAll('input', attrs={'name': 'selectedEIDs'}) ]
+    soup = BeautifulSoup(br.response().read())  # Get ALL current EIDs
+    br.form["selectedEIDs"] = [x['value'] for x in soup.findAll('input', attrs={'name': 'selectedEIDs'})]
 
-    br.form["oneClickExport"] = '{"Format":"CSV","View":"SpecifyFields", "SelectedFields":"Authors Title SourceTitle CitedBy DOI"}' #Make selected fields variable?
+    br.form["oneClickExport"] = '{"Format":"CSV","View":"SpecifyFields", "SelectedFields":"Authors Title SourceTitle CitedBy DOI"}'  # Make selected fields variable?
     br.form["clickedLink"] = "export"
     br.form["selectAllCheckBox"] = ["on"]
 
@@ -107,30 +101,34 @@ def csv_to_dict(data):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Search papers by author in scopus or web of science (not working).", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-s', '--search', help = "Select which db to search (wok|scopus)", default = 'scopus')
-    parser.add_argument('-o', '--output', help = "Output file", action = "store_true")
+    parser.add_argument('-s', '--search', help="Select which db to search (scopus)", default='scopus')
+    parser.add_argument('-o', '--output', help="Output file", action="store_true")
 
     subparsers = parser.add_subparsers(help='Search by author or article')
 
-    author_parser = subparsers.add_parser('author', help = 'Search by author name-lastname')
-    author_parser.add_argument('-n', '--name', required = True, help = "Name of the author")
-    author_parser.add_argument('-l', '--last_name', required = True, help = "Last name of the author")
+    author_parser = subparsers.add_parser('author', help='Search by author name-lastname or scopus_id')
+    author_parser.add_argument('-n', '--name', help="Name of the author")
+    author_parser.add_argument('-l', '--last_name', help="Last name of the author")
+    author_parser.add_argument('-i', '--scopus_id', help="Scopus id of the author")
 
-    article_parser = subparsers.add_parser('article', help = 'Search by article fields')
-    article_parser.add_argument('-a', '--articles', required = True, help = "Article fields to look for. Ex: -a '[[DOI, xxxx], [Title, xxxx]]'")
+    article_parser = subparsers.add_parser('article', help='Search by article fields')
+    article_parser.add_argument('-a', '--articles', required=True, help="Article fields to look for. Ex: -a '[[DOI, xxxx], [Title, xxxx]]'")
 
     args = parser.parse_args()
 
     if args.search == "scopus":
         if "articles" in args:
-            res = search_scopus_by_article(ast.literal_eval(args.articles))
+            res = get_scopus_publications_by_author(ast.literal_eval(args.articles))
         else:
-            res = search_scopus_by_author(args.name, args.last_name)
+            if args.name and args.last_name:
+                res = get_scopus_publications_by_author(args.name, args.last_name)
+            elif args.scopus_id:
+                res = get_scopus_publications_by_author_id(args.scopus_id)
+            else:
+                print "For author mode, you need to enter either name and last_name or scopus_id"
+                sys.exit()
     else:
-        if args.articles:
-            res = search_wok_by_article(ast.literal_eval(args.articles))
-        else:
-            res = search_wok_by_author(args.name, args.last_name)
+        print "Only scopus site is supported right now."
+        sys.exit()
 
     print csv_to_dict(csv.reader(res, skipinitialspace=True))
-

@@ -1,6 +1,6 @@
 ## Description
 
-- Return papers in scopus by author.
+- Return papers in scopus by author or scopus id.
 - Return papers in scopus by article field.
 
 Todo:
@@ -14,7 +14,7 @@ Todo:
 ## Installation
 
 You need to install mechanize and beautifulsoup4:
-     
+
      pip install mechanize beautifulsoup4
 
 
@@ -34,7 +34,7 @@ You need to install mechanize and beautifulsoup4:
     optional arguments:
       -h, --help            show this help message and exit
       -s SEARCH, --search SEARCH
-                            Select which db to search (wok|scopus) (default:
+                            Select which db to search (scopus) (default:
                             scopus)
       -o, --output          Output file (default: False)
 
@@ -48,8 +48,10 @@ You need to install mechanize and beautifulsoup4:
       -n NAME, --name NAME  Name of the author
       -l LAST_NAME, --last_name LAST_NAME
                             Last name of the author
+      -i SCOPUS_ID, --scopus_id SCOPUS_ID Scopus if of the author
 
 - *Example*: python crawler.py author -n john -l doe
+- *Example*: python crawler.py author -i 6602739976
 
 ### By Article Field
 

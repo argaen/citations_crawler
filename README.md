@@ -2,6 +2,7 @@
 
 - Return papers in scopus by author or scopus id.
 - Return papers in scopus by article field.
+- Return papers in orcid by author id.
 
 Todo:
 
@@ -24,7 +25,7 @@ You need to install mechanize and beautifulsoup4:
 
     usage: crawler.py [-h] [-s SEARCH] [-o] {author,article} ...
 
-    Search papers by author in scopus or web of science (not working).
+    Search papers by author in scopus or orcid.
 
     positional arguments:
       {author,article}      Search by author or article
@@ -52,8 +53,9 @@ You need to install mechanize and beautifulsoup4:
 
 - *Example*: python crawler.py author -n john -l doe
 - *Example*: python crawler.py author -i 6602739976
+- *Example*: python crawler.py -s orcid author -i 0000-0002-3597-4310
 
-### By Article Field
+### By Article Field (needs rewrite, not working since scopus changed html structure)
 
     usage: crawler.py article [-h] -a ARTICLES
 

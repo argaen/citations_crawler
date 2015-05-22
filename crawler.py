@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 import cookielib
 import argparse
 import csv
-import ast
 import sys
 import requests
 from xml.etree import ElementTree
@@ -45,7 +44,7 @@ def get_orcid_publications_by_author_id(orcid_id):
 
 def get_scopus_publications_by_author_id(scopus_id):
     br.open("http://www.scopus.com/authid/detail.url?authorId=%s" % scopus_id)
-    br.follow_link(text_regex="View in search results format")
+    br.follow_link(text_regex="View (all)? in search results format")
 
     br.select_form(name="SearchResultsForm")
     br.form.set_all_readonly(False)
@@ -53,7 +52,7 @@ def get_scopus_publications_by_author_id(scopus_id):
     soup = BeautifulSoup(br.response().read())  # Get ALL current EIDs
     br.form["selectedEIDs"] = [x['value'] for x in soup.findAll('input', attrs={'name': 'selectedEIDs'})]
 
-    br.form["oneClickExport"] = '{"Format":"CSV","View":"SpecifyFields", "SelectedFields":"Authors Title SourceTitle CitedBy DOI"}'  # Make selected fields variable?
+    br.form["oneClickExport"] = '{"Format":"CSV","SelectedFields":" Authors  Title  Year  SourceTitle  Volume Issue ArtNo PageStart PageEnd PageCount  CitedBy  DOI ","View":"SpecifyFields"}'
     br.form["clickedLink"] = "export"
     br.form["selectAllCheckBox"] = ["on"]
 
@@ -80,7 +79,7 @@ def get_scopus_publications_by_author(name, last_name):
     soup = BeautifulSoup(br.response().read())  # Get ALL current EIDs
     br.form["selectedEIDs"] = [x['value'] for x in soup.findAll('input', attrs={'name': 'selectedEIDs'})]
 
-    br.form["oneClickExport"] = '{"Format":"CSV","View":"SpecifyFields", "SelectedFields":"Authors Title SourceTitle CitedBy DOI"}'  # Make selected fields variable?
+    br.form["oneClickExport"] = '{"Format":"CSV","SelectedFields":" Authors  Title  Year  SourceTitle  Volume Issue ArtNo PageStart PageEnd PageCount  CitedBy  DOI ","View":"SpecifyFields"}'
     br.form["clickedLink"] = "export"
     br.form["selectAllCheckBox"] = ["on"]
 
